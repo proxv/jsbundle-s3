@@ -1,7 +1,7 @@
 {
   "author": "ProxV, Inc.",
   "name": "jsbundle-s3",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "decription": "Bundle, minify, and upload your JS code to Amazon's Simple Storage Service (S3).",
   "keywords": "bundle module package minify uglify s3 aws",
   "repository": {
