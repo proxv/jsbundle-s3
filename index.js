@@ -30,7 +30,9 @@ function createBundle(bundlePath, env, version) {
   process.stderr.write('Creating bundle: http:' + bundleUrl + ' ... ');
 
   try {
-    var uglifiedCode = _uglifiedBundle(jsbundleConfig);
+    var bundledCode = _bundle(jsbundleConfig);
+    var originalSize = Buffer.byteLength(bundledCode);
+    var uglifiedCode = _uglify(bundledCode);
   } catch (e) {
     console.error('Error.');
     throw e;
@@ -42,12 +44,12 @@ function createBundle(bundlePath, env, version) {
       throw err;
     } else {
       console.error('Done.');
-      _s3upload(data, s3Config);
+      _s3upload(data, s3Config, originalSize);
     }
   });
 }
 
-function _s3upload(data, s3Config) {
+function _s3upload(data, s3Config, originalSize) {
   s3Config.region = s3Config.region || amazon.US_EAST_1
   var s3 = new S3(s3Config);
 
@@ -61,6 +63,8 @@ function _s3upload(data, s3Config) {
     Body: data,
   };
 
+  console.error('Final minified/gzipped file size: ' + Math.round(data.length / 1024) +
+                'kB (' + Math.round((1 - data.length / originalSize) * 100) + '% savings)');
   process.stderr.write('Uploading to S3 ... ');
 
   s3.PutObject(options, function(err, data) {
@@ -103,13 +107,17 @@ function _bundleName(bundlePath) {
   return name;
 }
 
-function _uglifiedBundle(jsbundleConfig) {
+function _bundle(jsbundleConfig) {
   var bundle = new jsbundle.Bundle(jsbundleConfig);
   var code = bundle.compile();
   if (bundle.error) {
     throw bundle.error;
+  } else {
+    return code;
   }
+}
 
+function _uglify(code) {
   var ast = uglifyjs.parser.parse(code);
   ast = uglifyjs.consolidator.ast_consolidate(ast);
   ast = uglifyjs.uglify.ast_mangle(ast, { mangle: true });
