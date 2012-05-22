@@ -8,16 +8,16 @@ var S3 = awssum.load('amazon/s3').S3;
 var gzip = require('gzip');
 var exec = require('child_process').exec;
 
-function createBundle(bundlePath, env, version) {
+function createBundle(bundlePath, env, options) {
   var jsbundleConfig = jsbundle.parseConfig(bundlePath, env);
   var s3Config = jsbundleConfig.s3 || jsbundleConfig.S3;
   if (!s3Config) {
-    throw new Error('No "s3" key found in ' + path.resolve(bundlePath + '/jsbundle.json'));
+    throw new Error('No "s3" key found in ' + path.resolve(bundlePath + '/jsbundle.json for env: "' + env + '"'));
   } else if (!s3Config.bucketName) {
-    throw new Error('No bucket name specified in S3 config.');
+    throw new Error('No bucket name specified in S3 config for env: "' + env + '"');
   }
 
-  version = version || (new Date()).getTime();
+  var version = options.version || (new Date()).getTime();
   s3Config.version = version;
 
   var bundleName = _bundleName(bundlePath);
@@ -27,16 +27,18 @@ function createBundle(bundlePath, env, version) {
   s3Config.url = bundleUrl;
   jsbundleConfig.bundleUrl = JSON.stringify(bundleUrl);
 
-  process.stderr.write('Creating bundle: http:' + bundleUrl + ' ... ');
+  process.stderr.write('Creating bundle' + (options.dryRun ? ' (DRY RUN)' : '') + ': http:' + bundleUrl + ' ... ');
 
   try {
+    process.stderr.write('bundling ... ');
     var bundledCode = _bundle(jsbundleConfig);
-    var originalSize = Buffer.byteLength(bundledCode);
     var uglifiedCode = _uglify(bundledCode);
   } catch (e) {
     console.error('Error.');
     throw e;
   }
+
+  process.stderr.write('gzipping ... ');
 
   gzip(uglifiedCode, function(err, data) {
     if (err) {
@@ -44,12 +46,19 @@ function createBundle(bundlePath, env, version) {
       throw err;
     } else {
       console.error('Done.');
-      _s3upload(data, s3Config, originalSize);
+      console.error('Final minified + gzipped file size: ' + Math.round(data.length / 1024) +
+                    'kB (' + Math.round((1 - data.length / Buffer.byteLength(bundledCode)) * 100) + '% savings)');
+
+      if (options.dryRun) {
+        console.error('This is a dry run, so not uploading to S3.');
+      } else {
+        _s3upload(data, s3Config, originalSize);
+      }
     }
   });
 }
 
-function _s3upload(data, s3Config, originalSize) {
+function _s3upload(data, s3Config) {
   s3Config.region = s3Config.region || amazon.US_EAST_1
   var s3 = new S3(s3Config);
 
@@ -63,8 +72,6 @@ function _s3upload(data, s3Config, originalSize) {
     Body: data,
   };
 
-  console.error('Final minified/gzipped file size: ' + Math.round(data.length / 1024) +
-                'kB (' + Math.round((1 - data.length / originalSize) * 100) + '% savings)');
   process.stderr.write('Uploading to S3 ... ');
 
   s3.PutObject(options, function(err, data) {
@@ -119,15 +126,15 @@ function _bundle(jsbundleConfig) {
 
 function _uglify(code) {
   var ast = uglifyjs.parser.parse(code);
+  process.stderr.write('consolidating property names ... ');
   ast = uglifyjs.consolidator.ast_consolidate(ast);
+  process.stderr.write('mangling variable names ... ');
   ast = uglifyjs.uglify.ast_mangle(ast, { mangle: true });
+  process.stderr.write('squeezing AST ... ');
   ast = uglifyjs.uglify.ast_squeeze(ast);
   ast = uglifyjs.uglify.ast_squeeze_more(ast);
 
   return uglifyjs.uglify.gen_code(ast);
-}
-
-function _gzip(string) {
 }
 
 exports.createBundle = createBundle;

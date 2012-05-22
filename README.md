@@ -4,14 +4,15 @@ Bundle, minify, and upload your JS code to Amazon's Simple Storage Service (S3).
 
 ## Usage:
 
-    [JSBUNDLE_ENV=env] jsbundle-s3 <node_package_dir> [--bundle-version=version]
+    [JSBUNDLE_ENV=env] jsbundle-s3 <node_package_dir> [--bundle-version=version] [--dry-run]
 
 The options are basically identical to the [jsbundle options](https://github.com/proxv/jsbundle/blob/master/README.md).
 
-There are two major differences:
+There are three major differences to the jsbundle options:
 
   1. the <code>--bundle-version</code> option, which lets you specify a version string for the uploaded bundle. It defaults to a millisecond timestamp.
-  2. the "s3" key in <code>jsbundle.json</code>, which is as follows:
+  2. the <code>--dry-run</code> option, which will run everything *except* the actual S3 upload.
+  3. the "s3" key in <code>jsbundle.json</code>, which is as follows:
 
     <pre>"s3": {
       "accessKeyId": "my_key_id",

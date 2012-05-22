@@ -11,7 +11,7 @@
   "dependencies": {
     "awssum": "0.5.1",
     "uglify-js": "git://github.com/mishoo/UglifyJS.git#ef4d776aedee6cbc8959a8e76403b82523615d3a",
-    "jsbundle": "0.8.0",
+    "jsbundle": "0.8.1",
     "optimist": "0.3.4",
     "gzip": "0.1.0"
   },
