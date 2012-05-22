@@ -2,7 +2,6 @@ var fs = require('fs');
 var path = require('path');
 var uglifyjs = require('uglify-js');
 var jsbundle = require('jsbundle');
-var redis = require('redis');
 var awssum = require('awssum');
 var amazon = awssum.load('amazon/amazon');
 var S3 = awssum.load('amazon/s3').S3;
