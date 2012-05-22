@@ -52,7 +52,7 @@ function createBundle(bundlePath, env, options) {
       if (options.dryRun) {
         console.error('This is a dry run, so not uploading to S3.');
       } else {
-        _s3upload(data, s3Config, originalSize);
+        _s3upload(data, s3Config);
       }
     }
   });
