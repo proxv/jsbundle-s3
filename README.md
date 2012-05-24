@@ -4,26 +4,25 @@ Bundle, minify, and upload your JS code to Amazon's Simple Storage Service (S3).
 
 ## Usage:
 
-    [JSBUNDLE_ENV=env] jsbundle-s3 <node_package_dir> [--bundle-version=version] [--dry-run]
+    [JSBUNDLE_ENV=env] jsbundle-s3 <node_package_dir> [--dry-run]
 
 The options are basically identical to the [jsbundle options](https://github.com/proxv/jsbundle/blob/master/README.md).
 
-There are three major differences to the jsbundle options:
+There are two major differences to the jsbundle options:
 
-  1. the <code>--bundle-version</code> option, which lets you specify a version string for the uploaded bundle. It defaults to a millisecond timestamp.
-  2. the <code>--dry-run</code> option, which will run everything *except* the actual S3 upload.
-  3. the "s3" key in <code>jsbundle.json</code>, which is as follows:
+  1. the <code>--dry-run</code> option, which will run everything *except* the actual S3 upload.
+  2. the "s3" key in <code>jsbundle.json</code>, which is as follows:
 
     <pre>"s3": {
-      "accessKeyId": "my_key_id",
+      "accessKeyId": "my_access_key_id",
       "secretAccessKey": "my_secret_access_key",
-      "bucketName": "my_bucket_name",
-      "afterUpload": "redis-cli -p 6379 hmset jsbundle.urls $NAME $URL"
+      "bucketName": "my_bucket",
+      "afterUpload": "redis-cli hmset jsbundle.urls $NAME $URL"
     }</pre>
 
   <code>afterUpload</code> is optional, and runs a shell command with 3 variables set after S3 upload succeeds:
 
-  * <code>$NAME</code> &mdash; the file name (taken from the bundled package's package.json), e.g.: <code>mypackage.js</code>
-  * <code>$VERSION</code> &mdash; the version string, e.g.: <code>1337644600297</code>
-  * <code>$URL</code> &mdash; the url, without a protocol, of the uploaded file, e.g.: <code>//s3.amazonaws.com/mybucket/1337644600297/mypackage.js</code>
+  * <code>$NAME</code> &mdash; the file name (taken from the bundled package's package.json or directory name), e.g.: <code>mypackage.js</code>
+  * <code>$VERSION</code> &mdash; the sha1 version string, e.g.: <code>7f2da1cf914bd863068224aa1c10e2ba3a4bd0b0</code>
+  * <code>$URL</code> &mdash; the url, without a protocol, of the uploaded file, e.g.: <code>//s3.amazonaws.com/my_bucket/7f2da1cf914bd863068224aa1c10e2ba3a4bd0b0/mypackage.js</code>
 

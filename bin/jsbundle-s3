@@ -6,14 +6,11 @@ var argv = require('optimist').argv;
 var jsbundles3 = require('../index');
 
 if (argv.help || !argv._[0]) {
-  util.puts('usage:\n\t[JSBUNDLE_ENV=env] jsbundle-s3 <node_package_dir> [--bundle-version=version] [--dry-run]');
+  util.puts('usage:\n\t[JSBUNDLE_ENV=env] jsbundle-s3 <node_package_dir> [--dry-run]');
 } else if (argv.version) {
   util.puts(JSON.parse(fs.readFileSync(__dirname + '/../package.json', 'utf-8')).version);
 } else {
-  var options = {
-    version: argv['bundle-version'],
-    dryRun: Object.prototype.hasOwnProperty.call(argv, 'dry-run')
-  };
-  jsbundles3.createBundle(argv._[0], process.env.JSBUNDLE_ENV, options);
+  var dryRun = Object.prototype.hasOwnProperty.call(argv, 'dry-run');
+  jsbundles3.createBundle(argv._[0], process.env.JSBUNDLE_ENV, dryRun);
 }
 
