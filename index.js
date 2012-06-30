@@ -43,6 +43,7 @@ function createBundle(bundlePath, env, dryRun) {
   })
   .then(function() {
     console.error('not uploading to S3 because version "' + version + '" already exists.');
+    _afterUpload(s3Config);
   }, function(res) {
     if (res.StatusCode === 404) {
       process.stderr.write('minifying ... ');
@@ -87,21 +88,7 @@ function _s3upload(data, s3Config) {
       throw new Error(JSON.stringify(err.Body.Error));
     } else {
       console.error('Success!');
-      if (s3Config.afterUpload) {
-        var envVars = 'NAME="' + s3Config.bundleName + '" ' +
-                      'URL="' + s3Config.url + '" ' +
-                      'VERSION="' + s3Config.version + '"';
-        var cmd = envVars + " bash -c '" + s3Config.afterUpload + "'";
-        console.error('Executing: ' + cmd);
-        exec(cmd, function(err, stdout, stderr) {
-          if (stdout) {
-            process.stdout.write(stdout);
-          }
-          if (stderr) {
-            process.stderr.write(stderr);
-          }
-        });
-      }
+      _afterUpload(s3Config);
     }
   });
 }
@@ -122,7 +109,22 @@ function _bundleName(bundlePath) {
   return name;
 }
 
-function _bundle(jsbundleConfig, bundleUrl) {
+function _afterUpload(s3Config) {
+  if (s3Config.afterUpload) {
+    var envVars = 'NAME="' + s3Config.bundleName + '" ' +
+                  'URL="' + s3Config.url + '" ' +
+                  'VERSION="' + s3Config.version + '"';
+    var cmd = envVars + " bash -c '" + s3Config.afterUpload + "'";
+    console.error('Executing: ' + cmd);
+    exec(cmd, function(err, stdout, stderr) {
+      if (stdout) {
+        process.stdout.write(stdout);
+      }
+      if (stderr) {
+        process.stderr.write(stderr);
+      }
+    });
+  }
 }
 
 function _uglify(code) {
