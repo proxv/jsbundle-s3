@@ -8,8 +8,9 @@ var Q = require('q');
 var S3 = awssum.load('amazon/s3').S3;
 var gzip = require('gzip');
 var exec = require('child_process').exec;
+var crypto = require('crypto');
 
-function createBundle(bundlePath, env, dryRun) {
+function createBundle(bundlePath, env, options) {
   var jsbundleConfig = jsbundle.parseConfig(bundlePath, env);
   var s3Config = jsbundleConfig.s3 || jsbundleConfig.S3;
   if (!s3Config) {
@@ -22,12 +23,18 @@ function createBundle(bundlePath, env, dryRun) {
   var bundleName = _bundleName(bundlePath);
   s3Config.bundleName = bundleName;
 
-  process.stderr.write('Creating bundle' + (dryRun ? ' (DRY RUN)' : '') + ': ' + bundleName + ' ... ');
+  process.stderr.write('Creating bundle' + (options.dryRun ? ' (DRY RUN)' : '') + ': ' + bundleName + ' ... ');
 
   process.stderr.write('bundling ... ');
   var bundle = new jsbundle.Bundle(jsbundleConfig);
 
   var version = bundle.sha1();
+  if (options.versionSalt || options.noMinify) { // For the paranoid, to avoid exposing hash of unminified code,
+                                                 // or to ensure unminified and minified version numbers are distinct.
+    var sha1 = crypto.createHash('sha1');
+    sha1.update((options.versionSalt || 'unminified')  + version);
+    version = sha1.digest('hex');
+  }
   s3Config.version = version;
 
   var bundleUrl = '//s3.amazonaws.com/' + s3Config.bucketName + '/' + version + '/' + bundleName;
@@ -46,21 +53,33 @@ function createBundle(bundlePath, env, dryRun) {
     _afterUpload(s3Config);
   }, function(res) {
     if (res.StatusCode === 404) {
-      process.stderr.write('minifying ... ');
-      var uglifiedCode = _uglify(bundledCode);
+      var code;
+      if (!options.noMinify) {
+        process.stderr.write('minifying ... ');
+        code = _uglify(bundledCode);
+      } else {
+        process.stderr.write('skipping minification ... ');
+        code = bundledCode;
+      }
 
       process.stderr.write('gzipping ... ');
-      Q.ncall(gzip, null, uglifiedCode)
+      Q.ncall(gzip, null, code)
       .then(function(data) {
-        console.error('done.');
-        console.error('Final minified + gzipped file size: ' + Math.round(data.length / 1024) +
-                      'kB (' + Math.round((1 - data.length / Buffer.byteLength(bundledCode)) * 100) + '% savings)');
+        try {
+          console.error('done.');
+          console.error('Final file size: ' + Math.round(data.length / 1024) +
+                        'kB (' + Math.round((1 - data.length / Buffer.byteLength(bundledCode)) * 100) + '% savings)');
 
-        if (dryRun) {
-          console.error('This is a dry run, so not uploading to S3.');
-        } else {
-          _s3upload(data, s3Config);
+          if (options.dryRun) {
+            console.error('This is a dry run, so not uploading to S3.');
+          } else {
+            _s3upload(data, s3Config);
+          }
+        } catch (e) {
+          console.error(e);
         }
+      }, function(err) {
+        console.error(err);
       });
     } else {
       throw new Error(JSON.stringify(res.Body.Error));
