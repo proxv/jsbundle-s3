@@ -151,7 +151,7 @@ function _uglify(code) {
   process.stderr.write('consolidating property names ... ');
   ast = uglifyjs.consolidator.ast_consolidate(ast);
   process.stderr.write('mangling variable names ... ');
-  ast = uglifyjs.uglify.ast_mangle(ast, { mangle: true });
+  ast = uglifyjs.uglify.ast_mangle(ast);
   process.stderr.write('squeezing AST ... ');
   ast = uglifyjs.uglify.ast_squeeze(ast);
   ast = uglifyjs.uglify.ast_squeeze_more(ast);
